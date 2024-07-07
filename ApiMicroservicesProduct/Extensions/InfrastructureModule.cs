@@ -9,6 +9,7 @@ public static class InfrastructureModule
             .AddDbContextDependencyInjection(configuration)
             .AddRepositoriesDependencyInjection()
             .AddServicesDependencyInjection()
-            .AddExchangeRedisCacheDependencyInjection();
+            .AddExchangeRedisCacheDependencyInjection()
+            .AddFluentValidationDependencyInjection();
     }
 }

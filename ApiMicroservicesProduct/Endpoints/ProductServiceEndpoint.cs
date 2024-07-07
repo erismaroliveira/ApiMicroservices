@@ -1,5 +1,6 @@
 ﻿using ApiMicroservicesProduct.Dtos;
 using ApiMicroservicesProduct.Services.Interfaces;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
@@ -28,7 +29,9 @@ public static class ProductServiceEndpoint
 
     public static void MapProductServiceEndpoint(this WebApplication app)
     {
-        app.MapGet("/api/v1/products", async ([FromServices] IProductDtoService service, IDistributedCache cache) =>
+        app.MapGet("/api/v1/products", async (
+            [FromServices] IProductDtoService service,
+            IDistributedCache cache) =>
         {
             var cachedProducts = await GetCachedData<List<ProductDto>>(cache, "cached_products");
 
@@ -45,7 +48,10 @@ public static class ProductServiceEndpoint
             return Results.Ok(cachedProducts);
         });
 
-        app.MapGet("/api/v1/products/{id}", async ([FromServices] IProductDtoService service, IDistributedCache cache, int? id) =>
+        app.MapGet("/api/v1/products/{id}", async (
+            [FromServices] IProductDtoService service,
+            IDistributedCache cache,
+            int? id) =>
         {
             var cachedProduct = await GetCachedData<ProductDto>(cache, $"product_{id}");
             if (cachedProduct == null)
@@ -61,7 +67,10 @@ public static class ProductServiceEndpoint
             return Results.Ok(cachedProduct);
         });
 
-        app.MapGet("/api/v1/products/search/{keyword}", async ([FromServices] IProductDtoService service, IDistributedCache cache, string keyword) =>
+        app.MapGet("/api/v1/products/search/{keyword}", async (
+            [FromServices] IProductDtoService service,
+            IDistributedCache cache,
+            string keyword) =>
         {
             var cacheKey = $"cached_products_{keyword}";
             var cachedProducts = await GetCachedData<List<ProductDto>>(cache, cacheKey);
@@ -88,10 +97,20 @@ public static class ProductServiceEndpoint
             return Results.Ok(cachedProducts);
         });
 
-        app.MapPost("/api/v1/products", async ([FromServices] IProductDtoService service, IDistributedCache cache, [FromBody] ProductDto productDto) =>
+        app.MapPost("/api/v1/products", async (
+            [FromServices] IProductDtoService service,
+            IDistributedCache cache,
+            [FromBody] ProductDto productDto,
+            [FromServices] IValidator<ProductDto> validator) =>
         {
             if (productDto == null)
                 return Results.BadRequest("Invalid product data.");
+
+            var validationResult = await validator.ValidateAsync(productDto);
+            var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+
+            if (!validationResult.IsValid)
+                return Results.BadRequest(errors);
 
             try
             {
@@ -106,10 +125,21 @@ public static class ProductServiceEndpoint
             }
         });
 
-        app.MapPut("/api/v1/products/{id}", async ([FromServices] IProductDtoService service, IDistributedCache cache, int? id, [FromBody] ProductDto productDto) =>
+        app.MapPut("/api/v1/products/{id}", async (
+            [FromServices] IProductDtoService service,
+            IDistributedCache cache,
+            int? id,
+            [FromBody] ProductDto productDto,
+            [FromServices] IValidator<ProductDto> validator) =>
         {
             if (id == null || id != productDto.Id)
                 return Results.BadRequest("Id mismatch between URL and product data.");
+
+            var validationResult = await validator.ValidateAsync(productDto);
+            var errors = validationResult.Errors.Select(x => x.ErrorMessage).ToList();
+
+            if (!validationResult.IsValid)
+                return Results.BadRequest(errors);
 
             if (productDto == null)
                 return Results.BadRequest("Invalid product data.");
@@ -128,7 +158,10 @@ public static class ProductServiceEndpoint
             }
         });
 
-        app.MapDelete("/api/v1/products/{id}", async ([FromServices] IProductDtoService service, IDistributedCache cache, int? id) =>
+        app.MapDelete("/api/v1/products/{id}", async (
+            [FromServices] IProductDtoService service,
+            IDistributedCache cache,
+            int? id) =>
         {
             if (id == null)
                 return Results.BadRequest("Invalid product id.");
