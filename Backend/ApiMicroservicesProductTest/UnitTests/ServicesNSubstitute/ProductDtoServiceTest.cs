@@ -120,4 +120,18 @@ public class ProductDtoServiceTest
 
         await productDtoService.Received().UpdateAsync(Arg.Any<ProductDto>());
     }
+
+    [Fact]
+    public async Task DeleteAsync_DeleteExistingProduct()
+    {
+        // Arrange
+        var productDtoService = Substitute.For<IProductDtoService>();
+        var productId = 1;
+
+        productDtoService.GetByIdAsync(productId).Returns(new ProductDto { Id = productId });
+
+        await productDtoService.DeleteAsync(productId);
+
+        await productDtoService.Received(1).DeleteAsync(Arg.Any<int>());
+    }
 }
